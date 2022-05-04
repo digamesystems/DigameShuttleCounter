@@ -128,7 +128,13 @@ void  configureOTA();
 void initLIDAR(TFMPlus &tfmP, int port=1);
 int  processLIDAR(TFMPlus &tfmP, float &smoothed, int offset);
 
+void buildJSONPrefix();
 
+
+void buildJSONPrefix(){
+  // The first part of all of our JSON messages
+  jsonPrefix = "{\"deviceName\":\"" + deviceName + "\",\"deviceMAC\":\"" + WiFi.macAddress();
+}
 //****************************************************************************************                            
 void setup() // - Device initialization
 //****************************************************************************************
@@ -137,6 +143,8 @@ void setup() // - Device initialization
   delay(1000);            // Give port time to initalize
   
   loadDefaults();
+
+  showSplashScreen();
   
   DEBUG_PRINTLN("INITIALIZING HARDWARE...");
   
@@ -148,9 +156,8 @@ void setup() // - Device initialization
     configureOTA();  
   }
 
-  // The first part of all of our JSON messages
-  jsonPrefix = "{\"deviceName\":\"" + deviceName + "\",\"deviceMAC\":\"" + WiFi.macAddress();
-
+  buildJSONPrefix();
+  
   DEBUG_PRINTLN();
   DEBUG_PRINTLN("RUNNING!");
 
@@ -219,7 +226,7 @@ void loop()  // Main
 //****************************************************************************************
 void configureWiFi(){
 //****************************************************************************************
-  DEBUG_PRINTLN(" WiFi...");
+  DEBUG_PRINTLN("  WiFi...");
 
 }
 
@@ -227,7 +234,7 @@ void configureWiFi(){
 //****************************************************************************************
 void configureBluetooth(){
 //****************************************************************************************
-  DEBUG_PRINTLN(" Bluetooth...");
+  DEBUG_PRINTLN("  Bluetooth...");
   btUART.begin("Counter_" + getShortMACAddress()); // My Bluetooth device name 
                                   //  TODO: Provide opportunity to change names. 
   delay(1000);                    // Give port time to initalize
@@ -241,13 +248,13 @@ void configureLIDARs(){
   DEBUG_PRINTLN("  Configuring LIDARS...");
 
   #if HARDWARE_PRESENT
-    DEBUG_PRINTLN("  LIDAR 1...");
+    DEBUG_PRINTLN("    LIDAR 1...");
     tfMiniUART_1.begin(115200,SERIAL_8N1,25,33);  // Initialize TFMPLus device serial port.
     delay(1000);                                  // Give port time to initalize
     initLIDAR(tfmP_1, 1);
      
-    DEBUG_PRINTLN("  LIDAR 2...");
-    tfMiniUART_2.begin(115200,SERIAL_8N1,27,26); // For Daniels setup -> 17,16);  // Initialize TFMPLus device serial port.
+    DEBUG_PRINTLN("    LIDAR 2...");
+    tfMiniUART_2.begin(115200,SERIAL_8N1,17,16); // For Daniel's setup -> 17,16); For mine -> 27,26); 
     delay(1000);
     initLIDAR(tfmP_2, 2);
   #endif
@@ -361,12 +368,13 @@ void showMenu(){
   
   dualPrintln("MENU: ");
   dualPrintln("  [+][-]Menu Active");
-  dualPrintln("  [N]ame               (" + deviceName +")");
-  dualPrintln("  [D]istance threshold (" + String(distanceThreshold) + ")");
-  dualPrintln("  [S]moothing factor   (" + String(smoothingFactor) + ")");
-  dualPrintln("  [G]Get count data");
-  dualPrintln("  [C]Clear count data");
-  dualPrintln("  [R]aw Data Stream    (" + String(streamingRawData) + ")");
+  dualPrintln("  [n]Name               (" + deviceName +")");
+  dualPrintln("  [d]Distance threshold (" + String(distanceThreshold) + ")");
+  dualPrintln("  [s]Smoothing factor   (" + String(smoothingFactor) + ")");
+  dualPrintln("  [g]Get count data");
+  dualPrintln("  [c]Clear count data");
+  dualPrintln("  [r]Raw data stream    (" + String(streamingRawData) + ")");
+  dualPrintln("  [x]eXit and reboot");  
   dualPrintln();
   //dualPrintln("  Toggle [r]aw data stream ");
   }
@@ -412,19 +420,19 @@ void initLIDAR(TFMPlus &tfmP, int port){
      
   // Send some commands to configure the TFMini-Plus
   // Perform a system reset
-  DEBUG_PRINT( "  Activating LIDAR Sensor... ");
+  DEBUG_PRINT( "    Activating LIDAR Sensor... ");
   if( tfmP.sendCommand(SOFT_RESET, 0)){
       DEBUG_PRINTLN("Sensor Active.");
   }
   else{
-    DEBUG_PRINTLN("   TROUBLE ACTIVATING LIDAR!");                    
+    DEBUG_PRINTLN("     TROUBLE ACTIVATING LIDAR!");                    
     tfmP.printReply();
   }
 
   delay(1000);
 
   // Set the acquisition rate to 100 Hz.
-  DEBUG_PRINT( "  Adjusting Frame Rate... ");
+  DEBUG_PRINT( "    Adjusting Frame Rate... ");
   if( tfmP.sendCommand(SET_FRAME_RATE, FRAME_100)){
       DEBUG_PRINTLN("Frame Rate Adjusted.");
   }
@@ -545,6 +553,7 @@ void scanForUserInput()
     if (inString == "n") {
       dualPrintln(" Enter New Device Name. (" + deviceName +")");
       deviceName = getUserInput();
+      buildJSONPrefix(); // The device name is part of the prefix.
       dualPrint(" New Device Name: ");
       dualPrintln(deviceName);
       writeFile(SPIFFS, "/name.txt", deviceName.c_str());
@@ -582,6 +591,14 @@ void scanForUserInput()
     if(inString == "r"){
       streamingRawData = (!streamingRawData);
     } 
+
+    if(inString =="x"){
+      dualPrintln();
+      dualPrintln("Rebooting NOW...");
+      dualPrintln();
+      
+      ESP.restart();  
+    }
     
     if (!streamingRawData) showMenu(); 
   }   
