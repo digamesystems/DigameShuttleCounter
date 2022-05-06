@@ -35,17 +35,18 @@
 //****************************************************************************************
 // Digame Includes. (Usually found in ...Arduino\libraries\DigameUtils folder)
 //****************************************************************************************
-#include <digameDebug.h>     // Serial debugging defines. 
-#include <digameFile.h>      // Read/Write Text files.
-#include <digameNetwork.h>   // For MAC address functions
+#include <digameDebug.h>      // Serial debugging defines. 
+#include <digameFile.h>       // Read/Write Text files.
+#include <digameNetwork_v2.h> // For MAC address functions
+#include "credentials.h"      // network name, pw, etc.
 
-#include "BluetoothSerial.h" // Part of the ESP32 board package. 
-                             // By Evandro Copercini - 2018
+#include "BluetoothSerial.h"  // Part of the ESP32 board package. 
+                              // By Evandro Copercini - 2018
 
-#include <TFMPlus.h>         // Include TFMini Plus LIDAR Library v1.5.0
-                             // https://github.com/budryerson/TFMini-Plus
+#include <TFMPlus.h>          // Include TFMini Plus LIDAR Library v1.5.0
+                              // https://github.com/budryerson/TFMini-Plus
 
-#include <SPIFFS.h>          // FLASH file system support.
+#include <SPIFFS.h>           // FLASH file system support.
 
 
 // For Over the Air (OTA) updates... 
@@ -254,7 +255,7 @@ void configureLIDARs(){
     initLIDAR(tfmP_1, 1);
      
     DEBUG_PRINTLN("    LIDAR 2...");
-    tfMiniUART_2.begin(115200,SERIAL_8N1,17,16); // For Daniel's setup -> 17,16); For mine -> 27,26); 
+    tfMiniUART_2.begin(115200,SERIAL_8N1,27,26); // For Daniel's setup -> 17,16); For mine -> 27,26); 
     delay(1000);
     initLIDAR(tfmP_2, 2);
   #endif
@@ -500,13 +501,13 @@ String getUserInput() { // -- No range checking!
 //****************************************************************************************
   String inString;
 
-  while (!(debugUART.available()) && !(btUART.available())){
+  while (!(Serial.available()) && !(btUART.available())){
     delay(10);
     //lightSleepMSec(10);
     //vTaskDelay(10 / portTICK_PERIOD_MS);
   }  
 
-  if ( debugUART.available() ) inString = debugUART.readStringUntil('\n');
+  if ( Serial.available() ) inString = Serial.readStringUntil('\n');
   if ( btUART.available() ) inString = btUART.readStringUntil('\n');
   
   inString.trim();
@@ -526,8 +527,8 @@ void scanForUserInput()
  
   inputReceived = false;
   
-  if (debugUART.available()){
-    inString = debugUART.readStringUntil('\n');
+  if (Serial.available()){
+    inString = Serial.readStringUntil('\n');
     inputReceived = true;
   }  
 
